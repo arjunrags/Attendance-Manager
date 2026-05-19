@@ -4,6 +4,16 @@ import { Upload, Download, RefreshCw, FileText } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
+const sanitizeFilename = (value) => {
+  const sanitized = String(value || '')
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+  return sanitized || 'Exam'
+}
+
 export default function Reports() {
   const [exams, setExams] = useState([])
   const [selectedExam, setSelectedExam] = useState('')
@@ -18,15 +28,6 @@ export default function Reports() {
   const [useLabs, setUseLabs] = useState(false)
   const [singleSeating, setSingleSeating] = useState(false)
 
-  const sanitizeFilename = (value) => {
-    const sanitized = String(value || '')
-      .replace(/[<>:"/\\|?*]/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_+|_+$/g, '')
-
-    return sanitized || 'Exam'
-  }
   const [classCapOverride, setClassCapOverride] = useState('')
   const [labCapOverride, setLabCapOverride] = useState('')
 
@@ -317,8 +318,8 @@ export default function Reports() {
       doc.text('HOD Signature: _______________________', 130, finalY + 20)
     })
     
-    const safeExamName = sanitizeFilename(exam?.exam_name)
-    doc.save(`Seating_Plan_${safeExamName}.pdf`)
+    const sanitizedExamName = sanitizeFilename(exam?.exam_name)
+    doc.save(`Seating_Plan_${sanitizedExamName}.pdf`)
   }
 
   const exportAllPDF = () => {
@@ -395,8 +396,8 @@ export default function Reports() {
       })
     })
     
-    const safeExamName = sanitizeFilename(exam?.exam_name)
-    doc.save(`All_Schedules_Seating_Plan_${safeExamName}.pdf`)
+    const sanitizedExamName = sanitizeFilename(exam?.exam_name)
+    doc.save(`All_Schedules_Seating_Plan_${sanitizedExamName}.pdf`)
   }
 
   return (
