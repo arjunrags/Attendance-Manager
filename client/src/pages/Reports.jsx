@@ -17,6 +17,16 @@ export default function Reports() {
   const [useClassrooms, setUseClassrooms] = useState(true)
   const [useLabs, setUseLabs] = useState(false)
   const [singleSeating, setSingleSeating] = useState(false)
+
+  const sanitizeFilename = (value) => {
+    const sanitized = String(value || '')
+      .replace(/[<>:"/\\|?*]/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+
+    return sanitized || 'Exam'
+  }
   const [classCapOverride, setClassCapOverride] = useState('')
   const [labCapOverride, setLabCapOverride] = useState('')
 
@@ -301,13 +311,14 @@ export default function Reports() {
       })
       
       // Signature row at the bottom
-      const finalY = doc.lastAutoTable.finalY || 45
+      const finalY = doc.lastAutoTable?.finalY || 45
       doc.setFontSize(10)
       doc.text('Invigilator Signature: _______________________', 14, finalY + 20)
       doc.text('HOD Signature: _______________________', 130, finalY + 20)
     })
     
-    doc.save(`Seating_Plan_${exam.exam_name.replace(/\s+/g, '_')}.pdf`)
+    const safeExamName = sanitizeFilename(exam?.exam_name)
+    doc.save(`Seating_Plan_${safeExamName}.pdf`)
   }
 
   const exportAllPDF = () => {
@@ -377,14 +388,15 @@ export default function Reports() {
         })
         
         // Signature row at the bottom
-        const finalY = doc.lastAutoTable.finalY || 45
+        const finalY = doc.lastAutoTable?.finalY || 45
         doc.setFontSize(10)
         doc.text('Invigilator Signature: _______________________', 14, finalY + 20)
         doc.text('HOD Signature: _______________________', 130, finalY + 20)
       })
     })
     
-    doc.save(`All_Schedules_Seating_Plan_${exam.exam_name.replace(/\s+/g, '_')}.pdf`)
+    const safeExamName = sanitizeFilename(exam?.exam_name)
+    doc.save(`All_Schedules_Seating_Plan_${safeExamName}.pdf`)
   }
 
   return (
