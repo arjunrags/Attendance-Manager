@@ -225,122 +225,56 @@ export default function Reports() {
   }
 
   const exportPDF = () => {
-    if (seatingPlan.length === 0) return
-    
-    const exam = exams.find(e => e.id === parseInt(selectedExam))
-    let subjectCode = 'N/A'
-    let subjectName = 'N/A'
-    let scheduleDate = exam.start_date
-    let scheduleSession = `${exam.start_time} - ${exam.end_time}`
-
-    const activeSchedule = schedule.find(s => s.id === parseInt(selectedScheduleId))
-    if (activeSchedule) {
-      subjectCode = activeSchedule.subject_code
-      subjectName = activeSchedule.subject_name
-      scheduleDate = activeSchedule.exam_date
-      scheduleSession = activeSchedule.session
-    } else {
-      const sub = semesterSubjects.find(s => s.id === parseInt(manualSubjectId))
-      if (sub) {
-        subjectCode = sub.subject_code
-        subjectName = sub.subject_name
-      }
-      scheduleDate = manualDate
-      scheduleSession = manualSession
-    }
-    
-    const doc = new jsPDF()
-    
-    seatingPlan.forEach((room, index) => {
-      if (index > 0) doc.addPage()
+    try {
+      if (seatingPlan.length === 0) return
       
-      doc.setFontSize(16)
-      doc.text('SURE-SEAT PRO SEATING ARRANGEMENT', 105, 15, { align: 'center' })
-      
-      doc.setFontSize(11)
-      doc.text(`Exam: ${exam.exam_name} (${exam.exam_type})`, 14, 25)
-      doc.text(`Date: ${scheduleDate}`, 14, 32)
-      doc.text(`Time: ${scheduleSession}`, 14, 39)
-      doc.text(`Subject: ${subjectCode} - ${subjectName}`, 14, 46)
-      
-      doc.text(`Room: ${room.roomName}`, 140, 25)
-      doc.text(`Departments: ${room.depts.join(', ')}`, 140, 32)
-      doc.text(`Total Students: ${room.students.length}`, 140, 39)
-      
-      // 2-column layout mapping
-      const maxRows = Math.max(room.col1.length, room.col2.length)
-      const tableData = []
-      
-      for (let i = 0; i < maxRows; i++) {
-        const s1 = room.col1[i]
-        const s2 = room.col2[i]
-        
-        tableData.push([
-          s1 ? s1.seat : '', s1 ? s1.u : '', s1 ? s1.n : '', s1 ? s1.g : '',
-          s2 ? s2.seat : '', s2 ? s2.u : '', s2 ? s2.n : '', s2 ? s2.g : ''
-        ])
+      const exam = exams.find(e => e.id === parseInt(selectedExam))
+      if (!exam) {
+        alert("No exam selected or found.")
+        return
       }
 
-      autoTable(doc, {
-        startY: 52,
-        head: [['Seat', 'USN', 'Name', 'Dept', 'Seat', 'USN', 'Name', 'Dept']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [2, 6, 23] },
-        styles: { fontSize: 8 },
-        columnStyles: {
-          0: { cellWidth: 10 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 35 },
-          3: { cellWidth: 15 },
-          4: { cellWidth: 10 },
-          5: { cellWidth: 25 },
-          6: { cellWidth: 35 },
-          7: { cellWidth: 15 }
+      let subjectCode = 'N/A'
+      let subjectName = 'N/A'
+      let scheduleDate = exam.start_date || 'N/A'
+      let scheduleSession = `${exam.start_time || '09:00'} - ${exam.end_time || '12:00'}`
+
+      const activeSchedule = schedule.find(s => s.id === parseInt(selectedScheduleId))
+      if (activeSchedule) {
+        subjectCode = activeSchedule.subject_code || 'N/A'
+        subjectName = activeSchedule.subject_name || 'N/A'
+        scheduleDate = activeSchedule.exam_date || 'N/A'
+        scheduleSession = activeSchedule.session || 'N/A'
+      } else {
+        const sub = semesterSubjects.find(s => s.id === parseInt(manualSubjectId))
+        if (sub) {
+          subjectCode = sub.subject_code || 'N/A'
+          subjectName = sub.subject_name || 'N/A'
         }
-      })
+        scheduleDate = manualDate || 'N/A'
+        scheduleSession = manualSession || 'N/A'
+      }
       
-      // Signature row at the bottom
-      const finalY = doc.lastAutoTable.finalY || 45
-      doc.setFontSize(10)
-      doc.text('Invigilator Signature: _______________________', 14, finalY + 20)
-      doc.text('HOD Signature: _______________________', 130, finalY + 20)
-    })
-    
-    doc.save(`Seating_Plan_${exam.exam_name.replace(/\s+/g, '_')}.pdf`)
-  }
-
-  const exportAllPDF = () => {
-    if (seatingPlan.length === 0 || schedule.length === 0) return
-    
-    const exam = exams.find(e => e.id === parseInt(selectedExam))
-    const doc = new jsPDF()
-    let isFirstPage = true
-
-    schedule.forEach((activeSchedule) => {
-      const subjectCode = activeSchedule.subject_code
-      const subjectName = activeSchedule.subject_name
-      const scheduleDate = activeSchedule.exam_date
-      const scheduleSession = activeSchedule.session
-
-      seatingPlan.forEach((room) => {
-        if (!isFirstPage) {
-          doc.addPage()
-        } else {
-          isFirstPage = false
-        }
+      // jsPDF standard fonts only support ASCII. Remove all non-ASCII chars to prevent PDF corruption.
+      const safeText = (str) => {
+        if (!str) return ''
+        return String(str).replace(/[^\x20-\x7E]/g, '').trim()
+      }
+      
+      const doc = new jsPDF()
+      
+      seatingPlan.forEach((room, index) => {
+        if (index > 0) doc.addPage()
         
         doc.setFontSize(16)
         doc.text('SURE-SEAT PRO SEATING ARRANGEMENT', 105, 15, { align: 'center' })
         
         doc.setFontSize(11)
-        doc.text(`Exam: ${exam.exam_name} (${exam.exam_type})`, 14, 25)
-        doc.text(`Date: ${scheduleDate}`, 14, 32)
-        doc.text(`Time: ${scheduleSession}`, 14, 39)
-        doc.text(`Subject: ${subjectCode} - ${subjectName}`, 14, 46)
+        doc.text(`Exam: ${safeText(exam.exam_name)} (${safeText(exam.exam_type)})`, 14, 25)
+        doc.text(`Date: ${safeText(scheduleDate)}`, 14, 32)
         
-        doc.text(`Room: ${room.roomName}`, 140, 25)
-        doc.text(`Departments: ${room.depts.join(', ')}`, 140, 32)
+        doc.text(`Room: ${safeText(room.roomName)}`, 140, 25)
+        doc.text(`Departments: ${safeText(room.depts.join(', '))}`, 140, 32)
         doc.text(`Total Students: ${room.students.length}`, 140, 39)
         
         // 2-column layout mapping
@@ -352,13 +286,13 @@ export default function Reports() {
           const s2 = room.col2[i]
           
           tableData.push([
-            s1 ? s1.seat : '', s1 ? s1.u : '', s1 ? s1.n : '', s1 ? s1.g : '',
-            s2 ? s2.seat : '', s2 ? s2.u : '', s2 ? s2.n : '', s2 ? s2.g : ''
+            s1 ? safeText(s1.seat) : '', s1 ? safeText(s1.u) : '', s1 ? safeText(s1.n) : '', s1 ? safeText(s1.g) : '',
+            s2 ? safeText(s2.seat) : '', s2 ? safeText(s2.u) : '', s2 ? safeText(s2.n) : '', s2 ? safeText(s2.g) : ''
           ])
         }
 
         autoTable(doc, {
-          startY: 52,
+          startY: 45,
           head: [['Seat', 'USN', 'Name', 'Dept', 'Seat', 'USN', 'Name', 'Dept']],
           body: tableData,
           theme: 'grid',
@@ -382,9 +316,108 @@ export default function Reports() {
         doc.text('Invigilator Signature: _______________________', 14, finalY + 20)
         doc.text('HOD Signature: _______________________', 130, finalY + 20)
       })
-    })
-    
-    doc.save(`All_Schedules_Seating_Plan_${exam.exam_name.replace(/\s+/g, '_')}.pdf`)
+      
+      const rawName = exam.exam_name || 'Exam'
+      const safeName = rawName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+      doc.save(`Seating_Plan_${safeName || 'export'}.pdf`)
+      
+    } catch (err) {
+      console.error(err)
+      alert("Error generating PDF: " + err.message)
+    }
+  }
+
+  const exportAllPDF = () => {
+    try {
+      if (seatingPlan.length === 0 || schedule.length === 0) return
+      
+      const exam = exams.find(e => e.id === parseInt(selectedExam))
+      if (!exam) {
+        alert("No exam selected or found.")
+        return
+      }
+
+      const safeText = (str) => {
+        if (!str) return ''
+        return String(str).replace(/[^\x20-\x7E]/g, '').trim()
+      }
+
+      const doc = new jsPDF()
+      let isFirstPage = true
+
+      schedule.forEach((activeSchedule) => {
+        const subjectCode = activeSchedule.subject_code || 'N/A'
+        const subjectName = activeSchedule.subject_name || 'N/A'
+        const scheduleDate = activeSchedule.exam_date || 'N/A'
+        const scheduleSession = activeSchedule.session || 'N/A'
+
+        seatingPlan.forEach((room) => {
+          if (!isFirstPage) {
+            doc.addPage()
+          } else {
+            isFirstPage = false
+          }
+          
+          doc.setFontSize(16)
+          doc.text('SURE-SEAT PRO SEATING ARRANGEMENT', 105, 15, { align: 'center' })
+          
+          doc.setFontSize(11)
+          doc.text(`Exam: ${safeText(exam.exam_name)} (${safeText(exam.exam_type)})`, 14, 25)
+          doc.text(`Date: ${safeText(scheduleDate)}`, 14, 32)
+          
+          doc.text(`Room: ${safeText(room.roomName)}`, 140, 25)
+          doc.text(`Departments: ${safeText(room.depts.join(', '))}`, 140, 32)
+          doc.text(`Total Students: ${room.students.length}`, 140, 39)
+          
+          // 2-column layout mapping
+          const maxRows = Math.max(room.col1.length, room.col2.length)
+          const tableData = []
+          
+          for (let i = 0; i < maxRows; i++) {
+            const s1 = room.col1[i]
+            const s2 = room.col2[i]
+            
+            tableData.push([
+              s1 ? safeText(s1.seat) : '', s1 ? safeText(s1.u) : '', s1 ? safeText(s1.n) : '', s1 ? safeText(s1.g) : '',
+              s2 ? safeText(s2.seat) : '', s2 ? safeText(s2.u) : '', s2 ? safeText(s2.n) : '', s2 ? safeText(s2.g) : ''
+            ])
+          }
+
+          autoTable(doc, {
+            startY: 45,
+            head: [['Seat', 'USN', 'Name', 'Dept', 'Seat', 'USN', 'Name', 'Dept']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [2, 6, 23] },
+            styles: { fontSize: 8 },
+            columnStyles: {
+              0: { cellWidth: 10 },
+              1: { cellWidth: 25 },
+              2: { cellWidth: 35 },
+              3: { cellWidth: 15 },
+              4: { cellWidth: 10 },
+              5: { cellWidth: 25 },
+              6: { cellWidth: 35 },
+              7: { cellWidth: 15 }
+            }
+          })
+          
+          // Signature row at the bottom
+          const finalY = doc.lastAutoTable.finalY || 45
+          doc.setFontSize(10)
+          doc.text('Invigilator Signature: _______________________', 14, finalY + 20)
+          doc.text('HOD Signature: _______________________', 130, finalY + 20)
+        })
+      })
+      
+      const rawName = exam.exam_name || 'Exam'
+      const safeName = rawName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+      doc.save(`All_Schedules_Seating_Plan_${safeName || 'export'}.pdf`)
+      
+    } catch (err) {
+      console.error(err)
+      alert("Error generating PDF: " + err.message)
+    }
   }
 
   return (

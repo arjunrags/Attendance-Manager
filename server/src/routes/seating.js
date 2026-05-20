@@ -38,21 +38,24 @@ router.post('/generate', async (req, res) => {
         let queueB = [];
 
         if (uniqueSems.length >= 2) {
-            // Alternate Semesters: Queue A gets Sem A, Queue B gets Sem B
-            const semA = uniqueSems[0];
-            const semB = uniqueSems[1];
-            queueA = studentList.filter(s => (s.s || '1').toString().trim() === semA);
-            queueB = studentList.filter(s => (s.s || '1').toString().trim() === semB);
-            console.log(`Alternating Semesters: Queue A (Sem ${semA}) has ${queueA.length} students, Queue B (Sem ${semB}) has ${queueB.length} students.`);
+            // Alternate Semesters: Queue A gets Sem A (and C, E...), Queue B gets Sem B (and D, F...)
+            uniqueSems.forEach((sem, index) => {
+                const semStudents = studentList.filter(s => (s.s || '1').toString().trim() === sem);
+                if (index % 2 === 0) queueA.push(...semStudents);
+                else queueB.push(...semStudents);
+            });
+            console.log(`Alternating Semesters: Queue A has ${queueA.length} students, Queue B has ${queueB.length} students.`);
         } else {
             // Alternate Departments: If only one semester is writing exams
             const uniqueDepts = [...new Set(studentList.map(s => normalizeDept(s.g)))].sort();
             if (uniqueDepts.length >= 2) {
-                const deptA = uniqueDepts[0];
-                const deptB = uniqueDepts[1];
-                queueA = studentList.filter(s => normalizeDept(s.g) === deptA);
-                queueB = studentList.filter(s => normalizeDept(s.g) === deptB);
-                console.log(`Alternating Departments: Queue A (${deptA}) has ${queueA.length} students, Queue B (${deptB}) has ${queueB.length} students.`);
+                // Distribute ALL students into Queue A and Queue B based on alternating departments
+                uniqueDepts.forEach((dept, index) => {
+                    const deptStudents = studentList.filter(s => normalizeDept(s.g) === dept);
+                    if (index % 2 === 0) queueA.push(...deptStudents);
+                    else queueB.push(...deptStudents);
+                });
+                console.log(`Alternating Departments: Queue A has ${queueA.length} students, Queue B has ${queueB.length} students.`);
             } else {
                 // Single Dept Fallback: Split the single department consecutively
                 studentList.forEach((s, idx) => {
